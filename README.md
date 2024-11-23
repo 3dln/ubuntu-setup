@@ -32,7 +32,7 @@ A comprehensive setup script for initializing Ubuntu servers with Docker and ess
 
 1. Download the setup script:
 ```bash
-curl -O https://raw.githubusercontent.com/3dln/ubuntu-setup/main/setup.sh
+curl -O https://raw.githubusercontent.com/yourusername/ubuntu-setup/main/setup.sh
 ```
 
 2. Make the script executable:
@@ -40,23 +40,39 @@ curl -O https://raw.githubusercontent.com/3dln/ubuntu-setup/main/setup.sh
 chmod +x setup.sh
 ```
 
-3. Run the script with sudo and provide your username:
+3. Run the script with sudo:
 ```bash
-sudo ./setup.sh your_username
+# If you're logged in as the user you want to configure:
+sudo ./setup.sh $SUDO_USER
+
+# Or if you want to configure for a different user:
+sudo ./setup.sh username
 ```
 
 ## Usage
 
-The script must be run with sudo privileges and requires your username as an argument:
+The script must be run with sudo privileges. There are two ways to run it:
 
+1. **For the current sudo user** (recommended):
 ```bash
-sudo ./setup.sh your_username
+sudo ./setup.sh $SUDO_USER
 ```
 
-Example:
+2. **For a specific user**:
 ```bash
+sudo ./setup.sh username
+```
+
+Examples:
+```bash
+# For current sudo user
+sudo ./setup.sh $SUDO_USER
+
+# For specific user 'johndoe'
 sudo ./setup.sh johndoe
 ```
+
+Note: The `$SUDO_USER` environment variable automatically contains the username of the user who invoked sudo, which makes it the safest and most convenient option when setting up for your own user account.
 
 ## What Does It Configure?
 
@@ -196,8 +212,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For support and questions:
 - Open an issue in the repository
-- Contact: ashcan@3dln.com
-- Documentation: [README](https://github.com/3dln/ubuntu-setup/README.md)]
+- Contact: your@email.com
+- Documentation: [Link to your documentation]
 
 ---
 
