@@ -32,7 +32,7 @@ A comprehensive setup script for initializing Ubuntu servers with Docker and ess
 
 1. Download the setup script:
 ```bash
-curl -O https://raw.githubusercontent.com/yourusername/ubuntu-setup/main/setup.sh
+curl -O https://raw.githubusercontent.com/3dln/ubuntu-setup/main/setup.sh
 ```
 
 2. Make the script executable:
