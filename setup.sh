@@ -2,7 +2,7 @@
 
 # Script name: setup.sh
 # Description: Initial server setup script for Ubuntu with Docker installation
-# Usage: sudo bash setup.sh [USERNAME]
+# Usage: sudo bash setup.sh $SUDO_USER
 
 # Exit on any error
 set -e
@@ -30,7 +30,7 @@ check_root() {
 validate_username() {
     if [ $# -eq 0 ]; then
         log "Error: Please provide a username as an argument"
-        log "Usage: sudo bash setup.sh [USERNAME]"
+        log "Usage: sudo bash setup.sh \$SUDO_USER"
         exit 1
     fi
     
