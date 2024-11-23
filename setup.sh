@@ -84,22 +84,55 @@ setup_docker() {
     if ! command -v docker &>/dev/null; then
         log "Installing Docker..."
         
-        # Remove any old Docker installations
-        apt remove -y docker docker-engine docker.io containerd runc || true
+        # Remove any conflicting packages
+        local CONFLICTING_PACKAGES=(
+            docker.io
+            docker-doc
+            docker-compose
+            docker-compose-v2
+            podman-docker
+            containerd
+            runc
+        )
         
-        # Add Docker's official GPG key
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+        for pkg in "${CONFLICTING_PACKAGES[@]}"; do
+            apt-get remove -y "$pkg" || true
+        done
+        
+        # Install required packages for Docker repository
+        apt-get update
+        apt-get install -y ca-certificates curl
+        
+        # Setup Docker's official GPG key
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        chmod a+r /etc/apt/keyrings/docker.asc
         
         # Add Docker repository
         echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-            $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+            tee /etc/apt/sources.list.d/docker.list > /dev/null
         
-        # Install Docker
-        apt update
-        apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin || {
+        # Update apt repo
+        apt-get update
+        
+        # Install Docker packages
+        apt-get install -y \
+            docker-ce \
+            docker-ce-cli \
+            containerd.io \
+            docker-buildx-plugin \
+            docker-compose-plugin || {
             log "Error: Docker installation failed"
             exit 1
+        }
+        
+        # Verify installation
+        if ! docker run hello-world &>/dev/null; then
+            log "Warning: Docker installation verification failed"
+        else
+            log "Docker installation verified successfully"
         }
     else
         log "Docker is already installed"
@@ -180,6 +213,35 @@ secure_ssh() {
     
     # Restart SSH service
     systemctl restart sshd
+}
+
+# Function to cleanup Docker installation
+cleanup_docker() {
+    log "Cleaning up Docker installation..."
+    
+    # Stop and remove all containers, images, volumes
+    if command -v docker &>/dev/null; then
+        docker system prune -af --volumes || true
+    fi
+    
+    # Remove Docker packages
+    apt-get purge -y \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin \
+        docker-ce-rootless-extras || true
+    
+    # Remove Docker files
+    rm -rf /var/lib/docker
+    rm -rf /var/lib/containerd
+    
+    # Remove Docker repository files
+    rm -f /etc/apt/sources.list.d/docker.list
+    rm -f /etc/apt/keyrings/docker.asc
+    
+    log "Docker cleanup completed"
 }
 
 # Main execution
