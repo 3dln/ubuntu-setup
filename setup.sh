@@ -55,7 +55,7 @@ get_username() {
 # Function to install basic packages
 install_basic_packages() {
     log "Installing basic packages..."
-    apt update -y || {
+    apt-get update -y || {
         log "Error: Failed to update package list"
         exit 1
     }
@@ -71,7 +71,7 @@ install_basic_packages() {
         fail2ban
     )
     
-    apt install -y "${PACKAGES[@]}" || {
+    apt-get install -y "${PACKAGES[@]}" || {
         log "Error: Failed to install basic packages"
         exit 1
     }
@@ -81,61 +81,63 @@ install_basic_packages() {
 setup_docker() {
     local username="$1"
     
-    if ! command -v docker &>/dev/null; then
-        log "Installing Docker..."
-        
-        # Remove any conflicting packages
-        local CONFLICTING_PACKAGES=(
-            docker.io
-            docker-doc
-            docker-compose
-            docker-compose-v2
-            podman-docker
-            containerd
-            runc
-        )
-        
-        for pkg in "${CONFLICTING_PACKAGES[@]}"; do
-            apt-get remove -y "$pkg" || true
-        done
-        
-        # Install required packages for Docker repository
-        apt-get update
-        apt-get install -y ca-certificates curl
-        
-        # Setup Docker's official GPG key
-        install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-        chmod a+r /etc/apt/keyrings/docker.asc
-        
-        # Add Docker repository
-        echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-            tee /etc/apt/sources.list.d/docker.list > /dev/null
-        
-        # Update apt repo
-        apt-get update
-        
-        # Install Docker packages
-        apt-get install -y \
-            docker-ce \
-            docker-ce-cli \
-            containerd.io \
-            docker-buildx-plugin \
-            docker-compose-plugin || {
-            log "Error: Docker installation failed"
-            exit 1
-        }
-        
-        # Verify installation
-        if ! docker run hello-world &>/dev/null; then
-            log "Warning: Docker installation verification failed"
-        else
-            log "Docker installation verified successfully"
-        }
-    else
+    if command -v docker &> /dev/null; then
         log "Docker is already installed"
+        return
+    fi
+    
+    log "Installing Docker..."
+    
+    # Remove any conflicting packages
+    local CONFLICTING_PACKAGES=(
+        docker.io
+        docker-doc
+        docker-compose
+        docker-compose-v2
+        podman-docker
+        containerd
+        runc
+    )
+    
+    for pkg in "${CONFLICTING_PACKAGES[@]}"; do
+        apt-get remove -y "$pkg" || true
+    done
+    
+    # Install required packages for Docker repository
+    apt-get update
+    apt-get install -y ca-certificates curl
+    
+    # Setup Docker's official GPG key
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+    
+    # Add Docker repository
+    echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    # Update apt repo
+    apt-get update
+    
+    # Install Docker packages
+    if ! apt-get install -y \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin
+    then
+        log "Error: Docker installation failed"
+        exit 1
+    fi
+    
+    # Verify installation
+    if ! docker run hello-world &>/dev/null; then
+        log "Warning: Docker installation verification failed"
+    else
+        log "Docker installation verified successfully"
     fi
     
     # Add user to docker group
