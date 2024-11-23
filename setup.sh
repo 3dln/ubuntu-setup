@@ -2,7 +2,7 @@
 
 # Script name: setup.sh
 # Description: Initial server setup script for Ubuntu with Docker installation
-# Usage: sudo bash setup.sh $SUDO_USER
+# Usage: sudo bash setup.sh [USERNAME]
 
 # Exit on any error
 set -e
@@ -26,19 +26,30 @@ check_root() {
     fi
 }
 
-# Function to validate username
-validate_username() {
+# Function to get and validate username
+get_username() {
+    local username
+    
+    # If no argument provided, try to use SUDO_USER
     if [ $# -eq 0 ]; then
-        log "Error: Please provide a username as an argument"
-        log "Usage: sudo bash setup.sh \$SUDO_USER"
-        exit 1
+        if [ -n "${SUDO_USER:-}" ]; then
+            username="$SUDO_USER"
+        else
+            log "Error: No username provided and SUDO_USER is not set"
+            log "Usage: sudo bash setup.sh [USERNAME]"
+            exit 1
+        fi
+    else
+        username="$1"
     fi
     
     # Check if username exists
-    if ! id "$1" &>/dev/null; then
-        log "Error: User $1 does not exist"
+    if ! id "$username" &>/dev/null; then
+        log "Error: User $username does not exist"
         exit 1
     fi
+    
+    echo "$username"
 }
 
 # Function to install basic packages
@@ -68,7 +79,7 @@ install_basic_packages() {
 
 # Function to install and configure Docker
 setup_docker() {
-    local USERNAME=$1
+    local username="$1"
     
     if ! command -v docker &>/dev/null; then
         log "Installing Docker..."
@@ -95,9 +106,9 @@ setup_docker() {
     fi
     
     # Add user to docker group
-    if ! groups "$USERNAME" | grep -q '\bdocker\b'; then
+    if ! groups "$username" | grep -q '\bdocker\b'; then
         log "Adding user to docker group..."
-        usermod -aG docker "$USERNAME"
+        usermod -aG docker "$username"
         log "Note: Please log out and log back in for docker group changes to take effect"
     fi
     
@@ -173,15 +184,18 @@ secure_ssh() {
 
 # Main execution
 main() {
-    local USERNAME=$1
-    
     # Initial checks
     check_root
-    validate_username "$USERNAME"
+    
+    # Get and validate username (either from argument or SUDO_USER)
+    local username
+    username=$(get_username "$@")
+    
+    log "Starting setup for user: $username"
     
     # System setup
     install_basic_packages
-    setup_docker "$USERNAME"
+    setup_docker "$username"
     setup_firewall
     setup_fail2ban
     secure_ssh
@@ -194,5 +208,5 @@ main() {
     log "4. Log out and log back in for docker group changes to take effect"
 }
 
-# Execute main function with provided username
+# Execute main function with all provided arguments
 main "$@"
