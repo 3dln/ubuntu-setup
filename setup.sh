@@ -213,8 +213,24 @@ secure_ssh() {
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
     sed -i 's/X11Forwarding yes/X11Forwarding no/' /etc/ssh/sshd_config
     
-    # Restart SSH service
-    systemctl restart sshd
+    # Restart SSH service - Fixed to use ssh.service instead of sshd.service
+    if systemctl is-active --quiet ssh.service; then
+        systemctl restart ssh.service || {
+            log "Error: Failed to restart SSH service"
+            return 1
+        }
+    else
+        log "Warning: SSH service not found or not active"
+        # Try to start the service if it exists but is not active
+        if systemctl list-unit-files | grep -q ssh.service; then
+            systemctl start ssh.service || {
+                log "Error: Failed to start SSH service"
+                return 1
+            }
+        fi
+    fi
+    
+    log "SSH configuration completed successfully"
 }
 
 # Function to cleanup Docker installation
